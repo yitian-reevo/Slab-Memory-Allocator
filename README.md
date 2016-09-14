@@ -11,7 +11,7 @@ Certainly, SMA has other features to make it more efficient and I will talk abou
 # Implementation
 I found a figure on the Internet which is really helpful to understand the basic structure of SMA, and I changed it a bit for my own implementation, which is:
 
-
+![](https://github.com/wfgydbu/Slab-Memory-Allocator/blob/master/fighure/figure1.jpg)
 
 In this figure, all things starts from `cache_chain`, it links memory caches, each cache has three types of slabs queues; each slabs queue contains 0~N slabs and each slab contains a certain number of chunks which is the smallest unit allocated to other processes eventually. Note that different chunks belongs to different cache have different sizes which depend on the parameters when you initialized SMA.
 
