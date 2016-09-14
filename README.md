@@ -1,3 +1,9 @@
+---
+date: 2016-09-13 12:06:44
+status: public
+title: 'Slab Memory Allocator'
+---
+
 # Memory allocation
 From point of a C programmer's view, memory allocation might be straightforward, it's `malloc()` and `free()`. Os will allocate a suitable memory segment based on the size you apply, then give you the address of this memory segment. When you call `free()`, os identifies its corresponded `malloc()`, and take back the memory. This process is more complicated in real situation, but today we focus on the methodology of Slab Memory Allocation, so we simply forget these details temporarily.
 
@@ -11,15 +17,17 @@ Certainly, SMA has other features to make it more efficient and I will talk abou
 # Implementation
 I found a figure on the Internet which is really helpful to understand the basic structure of SMA, and I changed it a bit for my own implementation, which is:
 
-In this figure, all things starts from `cache_chain`, it links memory caches, each cache has three types of slabs queue; each slabs queue contains 0~N slabs and each slab contains a certain number of chunks which is the smallest unit allocated to other processes eventually. Note that different chunks belongs to different cache have different sizes which depend on the parameters when you initialized SMA.
+
+
+In this figure, all things starts from `cache_chain`, it links memory caches, each cache has three types of slabs queues; each slabs queue contains 0~N slabs and each slab contains a certain number of chunks which is the smallest unit allocated to other processes eventually. Note that different chunks belongs to different cache have different sizes which depend on the parameters when you initialized SMA.
 
 There are three types of slabs queue, `slabs_full` contains slabs that all chunks in slabs are used; `slabs_partial` contains slabs that some chunks in slabs are used and `slabs_empty` contains slabs that all chunks in slabs are not used.
 
 Consider this scenario, we initialize a SMA with parameters `min_size(4), max_size(4*1024*1024), growth_factor(2)`. Then the memory cache #1 will contain chunks with size `4`, cache #2 will contain chunks with size `4*2=8`, cache #3 is `8*2-16`, ..., until cache #N has chunks with size `4M`.
 
-When a process apply for a new memory of 7 Bytes, it firstly creates an `identity` to help SMA locate a suitable cache to use. SMA will find the cache that has the chunks size of `smallest but larger than 7`. Then SMA checks the `slabs_partial` queue in this cache to find the first chunk that is not used and return its address to the process, mark this chunk as `used`. After that, SMA runs a inner check to check if the slab is full, if YES, move this slab to `slabs_full` queue.
+When a process apply for a new memory of 7 Bytes, it firstly resolves an address of the cache about to be used, this cache will have the chunks size of `smallest but larger than 7`. Then SMA checks the `slabs_partial` queue in this cache to find the first chunk that is not used and return its address to the process, mark this chunk as `used`. After that, SMA runs a inner check to check if the slab is full, if YES, move this slab to `slabs_full` queue.
 
-When the process needs to free the memory it applied before. Similarly, SMA locates the cache based on its identity, and check its `slabs_full` and `slabs_partial` queues to find out the location of this memory segment and set it as `free`, without call `free()` function. After that, SMA runs a similar check, here we have two situations: (1) the memory segment is in `slabs_full` queue, then move this slab to `slabs_partial` queue; (2) the memory segment is in `slabs_partial` queue, then check if this queue is currently empty, if YES, move it to `slabs_empty` queue.
+When the process needs to free the memory it applied before. Similarly, SMA locates the cache about to be used, and check its `slabs_full` and `slabs_partial` queues to find out the location of this memory segment and set it as `free`, without call `free()` function. After that, SMA runs a similar check, here we have two situations: (1) the memory segment is in `slabs_full` queue, then move this slab to `slabs_partial` queue; (2) the memory segment is in `slabs_partial` queue, then check if this queue is currently empty, if YES, move it to `slabs_empty` queue.
 
 In my implementation, I ignore the situation about `memory pressure`. So I will free the slab immediately when the slab becomes empty, in other words, the `slabs_empty` queue will always be empty.
 
@@ -98,7 +106,7 @@ void *kmem_cache_free(kmem_cache_t *cp, void *buf);
 ```
 
 ## Source Code
-All source codes including test codes have been upload to [Slab Memory Allocator]() on GitHub. The source code is in `/src` directory.
+All source codes including test codes have been upload to [Slab Memory Allocator](https://github.com/wfgydbu/Slab-Memory-Allocator) on GitHub. The source code is in `/src` directory.
 
 
 # Evaluation
@@ -115,6 +123,12 @@ Test program `performance_slab [filename]` is used to calculate how much time it
 Test program `performance_no_slab [filename]` is used to calculate how much time it costs to allocate and free of the records in resource file, by using `malloc()` and `free()`. For example, `performance_no_slab resourse_100000`.
 
 Some test results of performance are:
+
+| No. | # of records | time cost with SMA(ms) | time cost without SMA (ms) |
+|-----|--------------|------------------------|----------------------------|
+| 1   | 10000        | 5.13                   | 150.83                     |
+| 2   | 10000        | 11.02                  | 161.38                     |
+| 3   | 10000        | 4.73                   | 123.02                     |
 
 We can see, using SMA actually leads to a remarkable improvement of performance.
 
