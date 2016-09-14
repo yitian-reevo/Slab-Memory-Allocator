@@ -25,83 +25,12 @@ When the process needs to free the memory it applied before. Similarly, SMA loca
 
 In my implementation, I ignore the situation about `memory pressure`. So I will free the slab immediately when the slab becomes empty, in other words, the `slabs_empty` queue will always be empty.
 
-## Data structure
-```c
-/* how many chunks per slab */
-#define MAX_CHUNKS 5
+## Data structure & API
+Both of them are in `/src/slab.h`.
 
-/* the smallest unit */
-typedef struct chunk{
-	bool flag;					/* true: used; false:free */
-	char* value;
-}chunk_t;
-
-/* Certain number of chunks construct a slab */
-typedef struct slab{
-	chunk_t chunks[MAX_CHUNKS];
-	struct slab *next;
-}slab_t;
-
-/* struct to manage slabs. */
-typedef struct slabs{
-	slab_t *slab_head;
-	slab_t *slab_tail;
-	struct slabs *next;
-}slabs_t;
-
-/* struct of kmem_cache */
-typedef struct kmem_cache{
-	unsigned int id;			/* identifiers of caches */
-    unsigned int size;      	/* sizes of each chunk */
-    unsigned int chunks;   		/* how many chunks per slab */
-	unsigned int slabs;     	/* how many slabs are currently allocated (full + partial) */
-		
-    slabs_t *slabs_full_head;	/* address of head of the queue for full/partial/empty slabs */
-	slabs_t *slabs_partial_head;
-	slabs_t *slabs_empty_head;
-	
-	struct kmem_cache *next;
-	
-}kmem_cache_t;
-
-
-/* Queue for caches, all starts here. */
-kmem_cache_t *cache_chain;
-```
-
-## API
-```c
-/** 
- * Init memory caches. 1st argument the growth factor. The first cache will contain
- * chunks of min_cahce_size (2nd argument); each cache will use a chunk size equal 
- * to the previous cache's chunk size times the growth factor; until the size of chunks 
- * reach max_cache_size (3rd argument). 
- * The expected factor should be at least great than 1.
- * Unit: byte.
- * Return: 0 - success, -1 - fail
- */
-int kmem_cache_init(const double growth_factor, const unsigned int min_cache_size, const unsigned int max_cache_size);
-
-/**
- * Given object name, size and align, return the address of cache to use when 
- * allocating/freeing memory for object.
- * Note: <name><align> not support
- */
-kmem_cache_t *kmem_cache_create(char* name, size_t size, int align);
-
-/* allocate memory of object return by kmem_Cache_create(...) 
- * Return value: an available address or NULL. 
- * Note: <flags> not support
- */
-void *kmem_cache_alloc(kmem_cache_t *cp, int flags);
-
-/* free memory of object return by kmem_Cache_create(...) */
-void *kmem_cache_free(kmem_cache_t *cp, void *buf);
-```
 
 ## Source Code
-All source codes including test codes have been upload to [Slab Memory Allocator](https://github.com/wfgydbu/Slab-Memory-Allocator) on GitHub. The source code is in `/src` directory.
-
+The source code is in `/src` directory.
 
 # Evaluation
 I also write some test codes to test my SMA, both for functionalities and performance. They are all in `/test` directory on GitHub. Execute `/test/compile.sh` to compile all test programs.
