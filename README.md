@@ -1,9 +1,3 @@
----
-date: 2016-09-13 12:06:44
-status: public
-title: 'Slab Memory Allocator'
----
-
 # Memory allocation
 From point of a C programmer's view, memory allocation might be straightforward, it's `malloc()` and `free()`. Os will allocate a suitable memory segment based on the size you apply, then give you the address of this memory segment. When you call `free()`, os identifies its corresponded `malloc()`, and take back the memory. This process is more complicated in real situation, but today we focus on the methodology of Slab Memory Allocation, so we simply forget these details temporarily.
 
